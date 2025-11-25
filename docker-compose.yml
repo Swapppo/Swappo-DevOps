@@ -1,0 +1,245 @@
+version: '3.8'
+
+services:
+  # Auth Service Database
+  auth_db:
+    image: postgres:15-alpine
+    container_name: swappo_auth_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: swappo
+      POSTGRES_PASSWORD: swappo_password
+      POSTGRES_DB: swappo_auth
+    ports:
+      - "5435:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swappo -d swappo_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swappo_network
+
+  # Auth Service API
+  auth_service:
+    build:
+      context: ./Swappo-Auth
+      dockerfile: Dockerfile
+    container_name: swappo_auth_service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://swappo:swappo_password@auth_db:5432/swappo_auth
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      REFRESH_SECRET_KEY: ${REFRESH_SECRET_KEY:-your-refresh-secret-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      ENVIRONMENT: production
+    ports:
+      - "8000:8000"
+    depends_on:
+      auth_db:
+        condition: service_healthy
+    networks:
+      - swappo_network
+
+  # Catalog Service Database
+  catalog_db:
+    image: postgres:15-alpine
+    container_name: swappo_catalog_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: swappo_catalog
+      POSTGRES_USER: swappo_user
+      POSTGRES_PASSWORD: swappo_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swappo_user -d swappo_catalog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swappo_network
+
+  # Catalog Service API
+  catalog_service:
+    build:
+      context: ./Swappo-Catalog
+      dockerfile: Dockerfile
+    container_name: swappo_catalog_service
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql://swappo_user:swappo_pass@catalog_db:5432/swappo_catalog
+      SQL_ECHO: "false"
+    depends_on:
+      catalog_db:
+        condition: service_healthy
+    networks:
+      - swappo_network
+    volumes:
+      - catalog_uploads:/app/uploads
+
+  # Matchmaking Service Database
+  matchmaking_db:
+    image: postgres:15-alpine
+    container_name: swappo_matchmaking_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: swappo_matchmaking
+      POSTGRES_USER: swappo_user
+      POSTGRES_PASSWORD: swappo_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - matchmaking_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swappo_user -d swappo_matchmaking"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swappo_network
+
+  # Matchmaking Service API
+  matchmaking_service:
+    build:
+      context: ./Swappo-Matchmaking
+      dockerfile: Dockerfile
+    container_name: swappo_matchmaking_service
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql://swappo_user:swappo_pass@matchmaking_db:5432/swappo_matchmaking
+      SQL_ECHO: "false"
+    depends_on:
+      matchmaking_db:
+        condition: service_healthy
+    networks:
+      - swappo_network
+
+  # Notifications Service Database
+  notifications_db:
+    image: postgres:15-alpine
+    container_name: swappo_notifications_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: swappo_notifications
+      POSTGRES_USER: swappo_user
+      POSTGRES_PASSWORD: swappo_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - notifications_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swappo_user -d swappo_notifications"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swappo_network
+
+  # Notifications Service API
+  notifications_service:
+    build:
+      context: ./Swappo-Notifications
+      dockerfile: Dockerfile
+    container_name: swappo_notifications_service
+    restart: unless-stopped
+    ports:
+      - "8003:8000"
+    environment:
+      DATABASE_URL: postgresql://swappo_user:swappo_pass@notifications_db:5432/swappo_notifications
+      SQL_ECHO: "false"
+    depends_on:
+      notifications_db:
+        condition: service_healthy
+    networks:
+      - swappo_network
+
+  # Chat Service Database
+  chat_db:
+    image: postgres:15-alpine
+    container_name: swappo_chat_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: swappo_chat
+      POSTGRES_USER: swappo_user
+      POSTGRES_PASSWORD: swappo_pass
+    ports:
+      - "5437:5432"
+    volumes:
+      - chat_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swappo_user -d swappo_chat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swappo_network
+
+  # Chat Service API
+  chat_service:
+    build:
+      context: ./Swappo-Chat
+      dockerfile: Dockerfile
+    container_name: swappo_chat_service
+    restart: unless-stopped
+    ports:
+      - "8004:8000"
+    environment:
+      DATABASE_URL: postgresql://swappo_user:swappo_pass@chat_db:5432/swappo_chat
+      SQL_ECHO: "false"
+    depends_on:
+      chat_db:
+        condition: service_healthy
+      notifications_service:
+        condition: service_started
+    networks:
+      - swappo_network
+
+  # PgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: swappo_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@swappo.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - auth_db
+      - catalog_db
+      - matchmaking_db
+      - notifications_db
+      - chat_db
+    networks:
+      - swappo_network
+    profiles:
+      - tools  # Only start with --profile tools
+
+volumes:
+  auth_postgres_data:
+    driver: local
+  catalog_postgres_data:
+    driver: local
+  catalog_uploads:
+    driver: local
+  matchmaking_postgres_data:
+    driver: local
+  notifications_postgres_data:
+    driver: local
+  chat_postgres_data:
+    driver: local
+
+networks:
+  swappo_network:
+    driver: bridge

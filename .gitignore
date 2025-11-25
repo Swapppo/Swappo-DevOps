@@ -1,0 +1,7 @@
+# Microservices with their own repositories
+/Swappo-Auth/
+/Swappo-Catalog/
+/Swappo-Chat/
+/Swappo-Matchmaking/
+/Swappo-Notifications/
+/Swappo-FE/

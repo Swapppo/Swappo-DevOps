@@ -1,0 +1,61 @@
+# Ingress - Single entry point for all services
+# Routes traffic based on URL paths to appropriate services
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swappo-ingress
+  namespace: swappo
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      # Auth Service - http://localhost/auth/*
+      - path: /auth(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8000
+      
+      # Catalog Service - http://localhost/catalog/*
+      - path: /catalog(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-service
+            port:
+              number: 8000
+      
+      # Matchmaking Service - http://localhost/matchmaking/*
+      - path: /matchmaking(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: matchmaking-service
+            port:
+              number: 8000
+      
+      # Notifications Service - http://localhost/notifications/*
+      - path: /notifications(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: notifications-service
+            port:
+              number: 8000
+      
+      # Chat Service - http://localhost/chat/*
+      - path: /chat(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 8000
