@@ -1,0 +1,7 @@
+# Namespace - Isolates your application resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swappo
+  labels:
+    name: swappo

@@ -1,0 +1,48 @@
+﻿# GKE Ingress for External Access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swappo-ingress
+  namespace: swappo
+  annotations:
+    kubernetes.io/ingress.class: "gce"  # Use GKE ingress
+    kubernetes.io/ingress.global-static-ip-name: "swappo-ip"  # Optional: reserve static IP
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api/v1/auth/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8000
+      - path: /api/v1/catalog/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: catalog-service
+            port:
+              number: 8000
+      - path: /api/v1/chat/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 8000
+      - path: /api/v1/matchmaking/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: matchmaking-service
+            port:
+              number: 8000
+      - path: /api/v1/notifications/*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: notifications-service
+            port:
+              number: 8000

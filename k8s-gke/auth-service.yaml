@@ -1,0 +1,119 @@
+﻿# Auth Service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: swappo
+spec:
+  replicas: 1  # Run 2 instances for high availability
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: auth-service
+        image: ghcr.io/swapppo/swappo-auth:latest  # Your Docker image from github 
+        imagePullPolicy: Always  
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: auth-database-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: secret-key
+        - name: REFRESH_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: refresh-secret-key
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: REFRESH_TOKEN_EXPIRE_DAYS
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: REFRESH_TOKEN_EXPIRE_DAYS
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ENVIRONMENT
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+# Service - Exposes Auth service
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: swappo
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: LoadBalancer  # Exposes externally via Docker Desktop
+
+---
+# Ingress - Optional: For routing multiple services
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: auth-ingress
+  namespace: swappo
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8000
