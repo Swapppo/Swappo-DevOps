@@ -1,0 +1,135 @@
+# Swappo Version Manifest
+# 
+# This file tracks which versions of each service are deployed
+# in different environments and verified to work together.
+#
+# Update this file when deploying new versions to ensure
+# all services are compatible.
+
+version: "1.0"
+last_updated: "2026-01-02"
+
+# Development Environment
+# These are the latest builds from the develop branch
+development:
+  auth:
+    image: ghcr.io/filipTurk/swappo-auth:develop
+    commit: ""  # Updated by CI/CD
+    tested_at: ""
+  
+  catalog:
+    image: ghcr.io/filipTurk/swappo-catalog:develop
+    commit: ""
+    tested_at: ""
+  
+  chat:
+    image: ghcr.io/filipTurk/swappo-chat:develop
+    commit: ""
+    tested_at: ""
+  
+  matchmaking:
+    image: ghcr.io/filipTurk/swappo-matchmaking:develop
+    commit: ""
+    tested_at: ""
+  
+  notifications:
+    image: ghcr.io/filipTurk/swappo-notifications:develop
+    commit: ""
+    tested_at: ""
+  
+  frontend:
+    version: "develop"
+    commit: ""
+    tested_at: ""
+
+# Staging Environment
+# These are release candidates for production
+staging:
+  auth:
+    image: ghcr.io/filipTurk/swappo-auth:staging
+    commit: ""
+    tested_at: ""
+  
+  catalog:
+    image: ghcr.io/filipTurk/swappo-catalog:staging
+    commit: ""
+    tested_at: ""
+  
+  chat:
+    image: ghcr.io/filipTurk/swappo-chat:staging
+    commit: ""
+    tested_at: ""
+  
+  matchmaking:
+    image: ghcr.io/filipTurk/swappo-matchmaking:staging
+    commit: ""
+    tested_at: ""
+  
+  notifications:
+    image: ghcr.io/filipTurk/swappo-notifications:staging
+    commit: ""
+    tested_at: ""
+  
+  frontend:
+    version: "staging"
+    commit: ""
+    tested_at: ""
+
+# Production Environment
+# These are stable, tested versions running in production
+production:
+  auth:
+    image: ghcr.io/filipTurk/swappo-auth:v1.0.0
+    commit: ""
+    tested_at: ""
+  
+  catalog:
+    image: ghcr.io/filipTurk/swappo-catalog:v1.0.0
+    commit: ""
+    tested_at: ""
+  
+  chat:
+    image: ghcr.io/filipTurk/swappo-chat:v1.0.0
+    commit: ""
+    tested_at: ""
+  
+  matchmaking:
+    image: ghcr.io/filipTurk/swappo-matchmaking:v1.0.0
+    commit: ""
+    tested_at: ""
+  
+  notifications:
+    image: ghcr.io/filipTurk/swappo-notifications:v1.0.0
+    commit: ""
+    tested_at: ""
+  
+  frontend:
+    version: "v1.0.0"
+    commit: ""
+    tested_at: ""
+
+# Compatibility Matrix
+# Track which versions are known to work together
+compatibility:
+  - version_set: "2026-01-02"
+    auth: "develop-abc123"
+    catalog: "develop-def456"
+    chat: "develop-ghi789"
+    matchmaking: "develop-jkl012"
+    notifications: "develop-mno345"
+    status: "tested"
+    integration_tests_passed: true
+    notes: "Initial release with all core features"
+
+# Rollback History
+# Track previous stable versions for quick rollback
+rollback_versions:
+  - date: "2026-01-01"
+    environment: "production"
+    reason: "Initial deployment"
+    versions:
+      auth: "v1.0.0"
+      catalog: "v1.0.0"
+      chat: "v1.0.0"
+      matchmaking: "v1.0.0"
+      notifications: "v1.0.0"

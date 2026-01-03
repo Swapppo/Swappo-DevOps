@@ -1,0 +1,235 @@
+# Enhanced CI/CD Pipeline with Kubernetes Support
+# This workflow builds images AND can optionally deploy to Kubernetes
+#
+# Features:
+# - Builds Docker images with commit SHA tags
+# - Pushes to GitHub Container Registry
+# - Option to update K8s manifests automatically
+# - Option to deploy to Kubernetes cluster
+
+name: CI/CD Pipeline with K8s
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Manual trigger
+
+env:
+  SERVICE_NAME: auth
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  K8S_MANIFEST_PATH: k8s/auth-service.yaml  # Path in your mono-repo or separate repo
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flake8 black
+        
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Check formatting with black
+      run: black --check .
+      continue-on-error: true
+      
+    - name: Run tests
+      run: |
+        if [ -d "tests" ]; then
+          pytest tests/ -v --cov=app --cov-report=term-missing
+        else
+          echo "No tests directory found, skipping tests"
+        fi
+
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+      
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/swappo-${{ env.SERVICE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Output image info
+      run: |
+        echo "### 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo "docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/swappo-${{ env.SERVICE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  security-scan:
+    name: Security Scan
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/swappo-${{ env.SERVICE_NAME }}:${{ github.ref_name }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+      continue-on-error: true
+
+  # OPTIONAL: Update K8s manifests
+  # This updates your K8s YAML files with the new image tag
+  # Enable by uncommenting this job
+  # update-k8s-manifests:
+  #   name: Update K8s Manifests
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   
+  #   permissions:
+  #     contents: write
+  #     
+  #   steps:
+  #   - name: Checkout mono-repo
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: ${{ github.repository_owner }}/Swappo  # Your mono-repo
+  #       token: ${{ secrets.GITHUB_TOKEN }}
+  #       
+  #   - name: Update image tag in K8s manifest
+  #     run: |
+  #       NEW_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/swappo-${{ env.SERVICE_NAME }}:main-${{ github.sha }}"
+  #       sed -i "s|image: .*swappo-${{ env.SERVICE_NAME }}.*|image: ${NEW_IMAGE}|g" ${{ env.K8S_MANIFEST_PATH }}
+  #       
+  #   - name: Commit and push changes
+  #     run: |
+  #       git config user.name github-actions
+  #       git config user.email github-actions@github.com
+  #       git add ${{ env.K8S_MANIFEST_PATH }}
+  #       git commit -m "Update ${{ env.SERVICE_NAME }} image to ${{ github.sha }}" || echo "No changes"
+  #       git push
+
+  # OPTIONAL: Deploy to Kubernetes
+  # This automatically deploys to your K8s cluster
+  # Only works for cloud K8s (AKS, EKS, GKE), not local Docker Desktop
+  # Enable by uncommenting and adding K8s credentials to GitHub Secrets
+  # deploy-to-k8s:
+  #   name: Deploy to Kubernetes
+  #   needs: [build-and-push, update-k8s-manifests]
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   
+  #   steps:
+  #   - name: Checkout mono-repo
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: ${{ github.repository_owner }}/Swappo
+  #       
+  #   # For Azure AKS:
+  #   # - name: Azure Login
+  #   #   uses: azure/login@v1
+  #   #   with:
+  #   #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+  #   #     
+  #   # - name: Set AKS context
+  #   #   uses: azure/aks-set-context@v3
+  #   #   with:
+  #   #     resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+  #   #     cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+  #   
+  #   # For AWS EKS:
+  #   # - name: Configure AWS credentials
+  #   #   uses: aws-actions/configure-aws-credentials@v4
+  #   #   with:
+  #   #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #   #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #   #     aws-region: us-east-1
+  #   #     
+  #   # - name: Update kubeconfig
+  #   #   run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
+  #   
+  #   # For GCP GKE:
+  #   # - name: Authenticate to GCP
+  #   #   uses: google-github-actions/auth@v1
+  #   #   with:
+  #   #     credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+  #   #     
+  #   # - name: Set up Cloud SDK
+  #   #   uses: google-github-actions/setup-gcloud@v1
+  #   #   
+  #   # - name: Get GKE credentials
+  #   #   run: gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} --region us-central1
+  #   
+  #   - name: Deploy to Kubernetes
+  #     run: |
+  #       kubectl apply -f k8s/namespace.yaml
+  #       kubectl apply -f k8s/configmap.yaml
+  #       kubectl apply -f k8s/secrets.yaml
+  #       kubectl apply -f k8s/auth-db.yaml
+  #       kubectl apply -f k8s/auth-service.yaml
+  #       kubectl rollout status deployment/auth-service -n swappo --timeout=5m
+  #       
+  #   - name: Verify deployment
+  #     run: |
+  #       kubectl get pods -n swappo -l app=auth-service
+  #       kubectl get svc -n swappo auth-service

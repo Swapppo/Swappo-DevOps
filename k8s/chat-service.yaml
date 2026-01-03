@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: chat-service
-        image: swappo-chat:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/filipTurk/swappo-chat:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

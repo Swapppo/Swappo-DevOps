@@ -1,0 +1,32 @@
+# Pre-commit Hook Configuration for Frontend
+# 
+# Installation:
+# 1. npm install -D @commitlint/cli @commitlint/config-conventional
+# 2. Copy this file to Swappo-FE as .pre-commit-config.yaml
+# 3. Add to package.json:
+#    "husky": {
+#      "hooks": {
+#        "pre-commit": "lint-staged"
+#      }
+#    }
+#
+# Or use Husky for Git hooks in JavaScript projects
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # TypeScript/JavaScript formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        files: \.(js|jsx|ts|tsx|json|css|md)$

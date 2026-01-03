@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: notifications-service
-        image: swappo-notifications:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/filipTurk/swappo-notifications:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

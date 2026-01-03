@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: matchmaking-service
-        image: swappo-matchmaking:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/filipTurk/swappo-matchmaking:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

@@ -1,0 +1,112 @@
+# Reusable CI/CD Workflow for React Native Frontend
+# Copy this to the frontend repo
+
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Lint code
+      run: npm run lint
+      continue-on-error: true
+      
+    - name: Type check
+      run: npx tsc --noEmit
+      continue-on-error: true
+      
+    - name: Run tests
+      run: |
+        if grep -q "\"test\":" package.json; then
+          npm test -- --passWithNoTests
+        else
+          echo "No test script found, skipping tests"
+        fi
+
+  build-check:
+    name: Build Check
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build for web
+      run: npx expo export --platform web
+      continue-on-error: true
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: web-build
+        path: dist/
+        retention-days: 7
+
+  # Optional: Build native apps (requires Expo credentials)
+  build-native:
+    name: Build Native Apps
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup Expo
+      uses: expo/expo-github-action@v8
+      with:
+        expo-version: latest
+        token: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build on EAS
+      run: |
+        echo "To enable EAS builds:"
+        echo "1. Run: npm install -g eas-cli"
+        echo "2. Run: eas build:configure"
+        echo "3. Add EXPO_TOKEN to GitHub secrets"
+        echo "4. Uncomment the build commands below"
+        # eas build --platform all --non-interactive --no-wait

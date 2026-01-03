@@ -30,8 +30,8 @@ spec:
     spec:
       containers:
       - name: catalog-service
-        image: swappo-catalog:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/filipTurk/swappo-catalog:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: swappo-auth:latest  # Your Docker image
-        imagePullPolicy: IfNotPresent  # For local Docker Desktop
+        image: ghcr.io/filipTurk/swappo-auth:latest  # Your Docker image from github 
+        imagePullPolicy: Always  
         ports:
         - containerPort: 8000
         env:
