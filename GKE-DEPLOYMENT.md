@@ -215,3 +215,32 @@ kubectl delete secret ghcr-secret -n swappo
 # GKE Autopilot will auto-scale, but you can adjust resource requests
 # Edit deployment manifests to reduce resources
 ```
+---
+
+## Frontend Deployment (Firebase Hosting)
+
+Your React Native/Expo frontend can be deployed as a web app to Firebase Hosting.
+
+See detailed instructions: **[Swappo-FE/FIREBASE_DEPLOYMENT.md](Swappo-FE/FIREBASE_DEPLOYMENT.md)**
+
+### Quick Start:
+
+```powershell
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Navigate to frontend
+cd Swappo-FE
+
+# Login and initialize
+firebase login
+firebase init hosting
+
+# Build and deploy
+npx expo export --platform web
+firebase deploy --only hosting
+```
+Project Console: https://console.firebase.google.com/project/swappo-a34df/overview
+Your app will be live at: `https://swappo-a34df.web.app`
+
+**Important**: Update backend CORS settings to allow requests from your Firebase domain.
