@@ -226,6 +226,56 @@ The microservices communicate with each other:
 - **Matchmaking → Chat**: Creates chat rooms when trade offers are accepted
 - **Chat → Notifications**: Sends notifications when new messages arrive
 
+## 🚀 Deployment
+
+### Backend (Microservices) → Google Kubernetes Engine
+
+Deploy all backend services to GKE (Google Cloud):
+
+📘 **[Complete GKE Deployment Guide](./GKE-DEPLOYMENT.md)**
+
+```powershell
+# Quick deploy
+gcloud container clusters create-auto swappo-cluster --region=europe-west3
+kubectl apply -f k8s-gke/
+```
+
+### Frontend → Firebase Hosting
+
+Deploy the web app to Firebase:
+
+📘 **[Firebase Deployment Guide](./Swappo-FE/FIREBASE_DEPLOYMENT.md)**  
+📘 **[Environment Setup Guide](./Swappo-FE/ENVIRONMENT_SETUP.md)**
+
+```powershell
+cd Swappo-FE
+npx expo export --platform web
+firebase deploy --only hosting
+```
+
+### Auto-Deployment (CI/CD)
+
+Push to `main` branch → GitHub Actions automatically deploys frontend to Firebase  
+See: `.github/workflows/deploy-frontend.yml`
+
+## 🌍 Environments
+
+### Local Development
+```powershell
+# Start backend
+docker-compose up
+
+# Start frontend
+cd Swappo-FE
+npm start
+```
+- Frontend: `http://localhost:19006`
+- Backend: `http://localhost:8000`
+
+### Production
+- **Frontend**: `https://swappo-b1e68.web.app` (Firebase Hosting)
+- **Backend**: `http://<GKE_EXTERNAL_IP>` (GKE Ingress)
+
 ## Support
 
 For issues or questions, please refer to individual service README files:
@@ -235,3 +285,8 @@ For issues or questions, please refer to individual service README files:
 - [Notifications Service](./Swappo-Notifications/README.md)
 - [Chat Service](./Swappo-Chat/README.md)
 - [Frontend](./Swappo-FE/README.md)
+
+### Deployment Guides
+- [GKE Deployment](./GKE-DEPLOYMENT.md) - Backend deployment to Google Cloud
+- [Firebase Deployment](./Swappo-FE/FIREBASE_DEPLOYMENT.md) - Frontend web deployment
+- [Environment Setup](./Swappo-FE/ENVIRONMENT_SETUP.md) - Local & production configuration

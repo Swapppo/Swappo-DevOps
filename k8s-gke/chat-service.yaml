@@ -75,4 +75,4 @@ spec:
   ports:
   - port: 8000
     targetPort: 8000
-  type: LoadBalancer
+  type: ClusterIP  # Internal only, exposed via ingress

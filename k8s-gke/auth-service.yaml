@@ -94,7 +94,7 @@ spec:
   ports:
   - port: 8000
     targetPort: 8000
-  type: LoadBalancer  # Exposes externally via Docker Desktop
+  type: ClusterIP  # Internal only, exposed via ingress
 
 ---
 # Ingress - Optional: For routing multiple services

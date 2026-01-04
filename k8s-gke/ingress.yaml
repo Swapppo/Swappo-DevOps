@@ -5,41 +5,42 @@ metadata:
   name: swappo-ingress
   namespace: swappo
   annotations:
-    kubernetes.io/ingress.class: "gce"  # Use GKE ingress
-    kubernetes.io/ingress.global-static-ip-name: "swappo-ip"  # Optional: reserve static IP
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
+  ingressClassName: nginx
   rules:
   - http:
       paths:
-      - path: /api/v1/auth/*
+      - path: /auth(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: auth-service
             port:
               number: 8000
-      - path: /api/v1/catalog/*
+      - path: /catalog(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: catalog-service
             port:
               number: 8000
-      - path: /api/v1/chat/*
+      - path: /chat(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: chat-service
             port:
               number: 8000
-      - path: /api/v1/matchmaking/*
+      - path: /matchmaking(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: matchmaking-service
             port:
               number: 8000
-      - path: /api/v1/notifications/*
+      - path: /notifications(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
