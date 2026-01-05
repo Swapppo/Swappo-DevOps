@@ -28,6 +28,10 @@ spec:
       labels:
         app: catalog-service
     spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
       imagePullSecrets:
       - name: ghcr-secret
       containers:
