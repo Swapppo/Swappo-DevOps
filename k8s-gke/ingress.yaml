@@ -1,4 +1,5 @@
-﻿# GKE Ingress for External Access
+﻿# GKE Ingress for External Access with HTTPS
+# Replace <EXTERNAL-IP> with your actual LoadBalancer IP
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,10 +8,19 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
+    # Force HTTPS redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Use cert-manager to automatically provision certificates
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - 34.185.186.13.nip.io
+    secretName: swappo-tls  # cert-manager will create this secret
   rules:
-  - http:
+  - host: 34.185.186.13.nip.io
+    http:
       paths:
       - path: /auth(/|$)(.*)
         pathType: ImplementationSpecific

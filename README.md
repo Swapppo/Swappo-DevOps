@@ -232,12 +232,18 @@ The microservices communicate with each other:
 
 Deploy all backend services to GKE (Google Cloud):
 
-📘 **[Complete GKE Deployment Guide](./GKE-DEPLOYMENT.md)**
+📘 **[Complete GKE Deployment Guide](./GKE-DEPLOYMENT.md)**  
+📘 **[HTTPS/TLS Setup Guide](./HTTPS_SETUP_GKE.md)**
 
 ```powershell
 # Quick deploy
 gcloud container clusters create-auto swappo-cluster --region=europe-west3
 kubectl apply -f k8s-gke/
+
+# Enable HTTPS with Let's Encrypt
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+kubectl apply -f k8s-gke/cluster-issuer.yaml
+kubectl apply -f k8s-gke/ingress.yaml
 ```
 
 ### Frontend → Firebase Hosting
@@ -274,7 +280,16 @@ npm start
 
 ### Production
 - **Frontend**: `https://swappo-b1e68.web.app` (Firebase Hosting)
-- **Backend**: `http://<GKE_EXTERNAL_IP>` (GKE Ingress)
+- **Backend**: `https://34.185.186.13.nip.io` (GKE with HTTPS/TLS)
+
+#### Production API Endpoints (HTTPS)
+- Auth: `https://34.185.186.13.nip.io/auth/`
+- Catalog: `https://34.185.186.13.nip.io/catalog/`
+- Chat: `https://34.185.186.13.nip.io/chat/`
+- Matchmaking: `https://34.185.186.13.nip.io/matchmaking/`
+- Notifications: `https://34.185.186.13.nip.io/notifications/`
+
+> **Note**: The backend uses nip.io for automatic DNS resolution and Let's Encrypt for SSL certificates. See [HTTPS Setup Guide](./HTTPS_SETUP_GKE.md) for details.
 
 ## Support
 
@@ -288,5 +303,6 @@ For issues or questions, please refer to individual service README files:
 
 ### Deployment Guides
 - [GKE Deployment](./GKE-DEPLOYMENT.md) - Backend deployment to Google Cloud
+- [HTTPS/TLS Setup](./HTTPS_SETUP_GKE.md) - Enable HTTPS with Let's Encrypt and nip.io
 - [Firebase Deployment](./Swappo-FE/FIREBASE_DEPLOYMENT.md) - Frontend web deployment
 - [Environment Setup](./Swappo-FE/ENVIRONMENT_SETUP.md) - Local & production configuration
