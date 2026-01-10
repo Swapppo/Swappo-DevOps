@@ -25,6 +25,9 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
+          name: http
+        - containerPort: 50051
+          name: grpc
         resources:
           requests:
             cpu: 100m
@@ -103,6 +106,10 @@ spec:
   selector:
     app: catalog-service
   ports:
-  - port: 8000
+  - name: http
+    port: 8000
     targetPort: 8000
+  - name: grpc
+    port: 50051
+    targetPort: 50051
   type: ClusterIP
