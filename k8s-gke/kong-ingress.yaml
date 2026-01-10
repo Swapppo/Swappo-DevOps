@@ -1,0 +1,61 @@
+# Kong Ingress for Swappo Microservices
+# This replaces your existing NGINX ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swappo-kong-ingress
+  namespace: swappo
+  annotations:
+    # Use Kong as the ingress controller
+    kubernetes.io/ingress.class: kong
+    # Kong-specific annotations for path handling
+    konghq.com/strip-path: "true"
+    # Enable HTTPS redirect (Kong will handle this)
+    konghq.com/protocols: "https,http"
+    # Use cert-manager for TLS
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: kong
+  tls:
+  - hosts:
+    - 34.40.17.122.nip.io
+    secretName: swappo-tls-kong  # Different name to avoid conflicts
+  rules:
+  - host: 34.40.17.122.nip.io
+    http:
+      paths:
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8000
+      - path: /catalog
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-service
+            port:
+              number: 8000
+      - path: /chat
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 8000
+      - path: /matchmaking
+        pathType: Prefix
+        backend:
+          service:
+            name: matchmaking-service
+            port:
+              number: 8000
+      - path: /notifications
+        pathType: Prefix
+        backend:
+          service:
+            name: notifications-service
+            port:
+              number: 8000

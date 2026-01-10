@@ -1,0 +1,93 @@
+# Kong Plugins for API Gateway Features
+# These add advanced capabilities to your services
+
+---
+# Global Rate Limiting (applies to all services)
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: global-rate-limit
+  namespace: swappo
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "true"  # Apply to all routes
+plugin: rate-limiting
+config:
+  minute: 100
+  hour: 5000
+  policy: local
+
+---
+# CORS Plugin (allows frontend to call your APIs)
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: global-cors
+  namespace: swappo
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "true"
+plugin: cors
+config:
+  origins:
+    - "*"  # Change to your frontend domain in production
+  methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - PATCH
+    - OPTIONS
+  headers:
+    - Accept
+    - Authorization
+    - Content-Type
+    - X-Auth-Token
+  exposed_headers:
+    - X-Auth-Token
+  credentials: true
+  max_age: 3600
+
+---
+# Request/Response Logging
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: global-logging
+  namespace: swappo
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "true"
+plugin: file-log
+config:
+  path: /dev/stdout
+  reopen: true
+
+---
+# JWT Authentication for Auth Service (example - optional)
+# Uncomment if you want Kong to validate JWTs
+# apiVersion: configuration.konghq.com/v1
+# kind: KongPlugin
+# metadata:
+#   name: auth-jwt
+#   namespace: swappo
+# plugin: jwt
+# config:
+#   secret_is_base64: false
+#   key_claim_name: iss
+
+---
+# Service-specific Rate Limiting (stricter for auth)
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: auth-rate-limit
+  namespace: swappo
+plugin: rate-limiting
+config:
+  minute: 20
+  hour: 500
+  policy: local

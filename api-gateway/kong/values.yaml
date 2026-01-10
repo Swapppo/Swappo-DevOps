@@ -1,0 +1,20 @@
+# values.yaml
+deployment:
+  kong:
+    enabled: true
+
+# Enable the Ingress Controller
+ingressController:
+  enabled: true
+  installCRDs: true
+  env:
+    publish_service: kong/kong-gateway-proxy
+
+# GKE-specific Load Balancer settings
+proxy:
+  type: LoadBalancer
+  annotations:
+    # This links the Service to the BackendConfig created in Step 2
+    beta.cloud.google.com/backend-config: '{"default": "kong-hc"}'
+    # Optional: Use a static IP if you have one reserved in GCP
+    # kubernetes.io/ingress.global-static-ip-name: "my-static-ip"
