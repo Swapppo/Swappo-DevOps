@@ -2,7 +2,7 @@
 # These add advanced capabilities to your services
 
 ---
-# Global Rate Limiting (applies to all services)
+# Global Rate Limiting (applies to all services except monitoring)
 apiVersion: configuration.konghq.com/v1
 kind: KongClusterPlugin
 metadata:
@@ -14,8 +14,8 @@ metadata:
     global: "true"  # Apply to all routes
 plugin: rate-limiting
 config:
-  minute: 100
-  hour: 5000
+  minute: 500
+  hour: 20000
   policy: local
 
 ---

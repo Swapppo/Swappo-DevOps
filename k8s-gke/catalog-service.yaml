@@ -14,6 +14,10 @@ spec:
     metadata:
       labels:
         app: catalog-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: default  # Uses workload identity for GCS access
       imagePullSecrets:
@@ -102,6 +106,10 @@ kind: Service
 metadata:
   name: catalog-service
   namespace: swappo
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: catalog-service

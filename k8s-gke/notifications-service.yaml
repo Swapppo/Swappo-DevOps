@@ -14,6 +14,10 @@ spec:
     metadata:
       labels:
         app: notifications-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: default
       imagePullSecrets:
@@ -91,6 +95,10 @@ kind: Service
 metadata:
   name: notifications-service
   namespace: swappo
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: notifications-service

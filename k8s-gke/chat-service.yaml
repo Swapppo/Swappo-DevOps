@@ -14,6 +14,10 @@ spec:
     metadata:
       labels:
         app: chat-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: default
       imagePullSecrets:
@@ -93,6 +97,10 @@ kind: Service
 metadata:
   name: chat-service
   namespace: swappo
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: chat-service

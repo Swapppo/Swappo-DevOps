@@ -1,0 +1,42 @@
+# Separate Ingress for Monitoring Tools (Prometheus, Grafana)
+# No rate limiting for monitoring endpoints
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: monitoring-no-rate-limit
+  namespace: swappo
+plugin: request-termination
+disabled: true  # This plugin is disabled, just used to override global plugins
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swappo-monitoring-ingress
+  namespace: swappo
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/strip-path: "false"
+    konghq.com/protocols: "http"
+    # Override global rate-limiting plugin for monitoring endpoints
+    konghq.com/override: "global-rate-limit"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: 34.40.17.122.nip.io
+    http:
+      paths:
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+      - path: /prometheus
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
