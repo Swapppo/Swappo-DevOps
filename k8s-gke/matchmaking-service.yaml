@@ -15,9 +15,11 @@ spec:
       labels:
         app: matchmaking-service
     spec:
+      serviceAccountName: default
       imagePullSecrets:
       - name: ghcr-secret
       containers:
+      # Main application container
       - name: matchmaking-service
         image: ghcr.io/swapppo/swappo-matchmaking:latest
         imagePullPolicy: Always
@@ -31,11 +33,9 @@ spec:
             cpu: 250m
             memory: 256Mi
         env:
+        # Database connection via Cloud SQL Proxy
         - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: swappo-secrets
-              key: matchmaking-database-url
+          value: postgresql://matchmaking_user:Admin@127.0.0.1:5432/swappo_matchmaking
         - name: SQL_ECHO
           valueFrom:
             configMapKeyRef:
@@ -64,6 +64,30 @@ spec:
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 5
+      
+      # Cloud SQL Proxy sidecar
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - "$(DB_INSTANCE_CONNECTION_NAME)"
+        env:
+        - name: DB_INSTANCE_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: db-instance-connection-name
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
 
 ---
 apiVersion: v1

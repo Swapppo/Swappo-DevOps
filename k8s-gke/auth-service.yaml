@@ -15,12 +15,14 @@ spec:
       labels:
         app: auth-service
     spec:
+      serviceAccountName: default
       imagePullSecrets:
       - name: ghcr-secret
       containers:
+      # Main application container
       - name: auth-service
-        image: ghcr.io/swapppo/swappo-auth:latest  # Your Docker image from github 
-        imagePullPolicy: Always  
+        image: ghcr.io/swapppo/swappo-auth:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         resources:
@@ -31,11 +33,9 @@ spec:
             cpu: 250m
             memory: 256Mi
         env:
+        # Database connection via Cloud SQL Proxy
         - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: swappo-secrets
-              key: auth-database-url
+          value: postgresql://auth_user:Admin@127.0.0.1:5432/swappo_auth
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
@@ -80,6 +80,30 @@ spec:
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 5
+      
+      # Cloud SQL Proxy sidecar
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - "$(DB_INSTANCE_CONNECTION_NAME)"
+        env:
+        - name: DB_INSTANCE_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: db-instance-connection-name
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
 
 ---
 # Service - Exposes Auth service

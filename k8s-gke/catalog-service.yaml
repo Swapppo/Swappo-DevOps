@@ -1,17 +1,4 @@
-﻿# Catalog Service
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: catalog-uploads-pvc
-  namespace: swappo
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-
+# Catalog Service Deployment with Cloud SQL
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,13 +15,11 @@ spec:
       labels:
         app: catalog-service
     spec:
-      securityContext:
-        fsGroup: 1000
-        runAsUser: 1000
-        runAsNonRoot: true
+      serviceAccountName: default  # Uses workload identity for GCS access
       imagePullSecrets:
       - name: ghcr-secret
       containers:
+      # Main application container
       - name: catalog-service
         image: ghcr.io/swapppo/swappo-catalog:latest
         imagePullPolicy: Always
@@ -45,29 +30,32 @@ spec:
             cpu: 100m
             memory: 128Mi
           limits:
-            cpu: 250m
-            memory: 256Mi
+            cpu: 500m
+            memory: 512Mi
         env:
+        # Database connection (via Cloud SQL Proxy on localhost)
         - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: swappo-secrets
-              key: catalog-database-url
+          value: postgresql://swappo_user:Admin@127.0.0.1:5432/swappo_catalog
         - name: SQL_ECHO
           valueFrom:
             configMapKeyRef:
               name: swappo-config
               key: SQL_ECHO
-        volumeMounts:
-        - name: uploads
-          mountPath: /app/uploads
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
+        
+        # Google Cloud Storage
+        - name: USE_GCS
+          value: "true"
+        - name: GCS_BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: gcs-bucket-name
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: gcp-project-id
+        
         livenessProbe:
           httpGet:
             path: /health
@@ -80,10 +68,30 @@ spec:
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 5
-      volumes:
-      - name: uploads
-        persistentVolumeClaim:
-          claimName: catalog-uploads-pvc
+      
+      # Cloud SQL Proxy sidecar
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - "$(DB_INSTANCE_CONNECTION_NAME)"
+        env:
+        - name: DB_INSTANCE_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: db-instance-connection-name
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
 
 ---
 apiVersion: v1
@@ -97,4 +105,4 @@ spec:
   ports:
   - port: 8000
     targetPort: 8000
-  type: ClusterIP  # Internal only, exposed via ingress
+  type: ClusterIP
