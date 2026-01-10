@@ -48,3 +48,24 @@ def test_grpc():
 if __name__ == "__main__":
     success = test_grpc()
     sys.exit(0 if success else 1)
+    
+"""
+PS C:\Users\turkf\Pictures\mag2\RSO\Swappo> kubectl exec -n swappo matchmaking-service-56f4685797-947cc -c matchmaking-service -- python /tmp/test_grpc.py
+🧪 Testing gRPC connection to Catalog service...
+
+1️⃣ Testing ValidateItems RPC...
+✅ Connected to Catalog gRPC service at catalog-service:50051
+✅ ValidateItems returned 3 validations
+   - Item 1: exists=True, active=True
+   - Item 2: exists=True, active=True
+   - Item 999: exists=False, active=False
+
+2️⃣ Testing GetItem RPC...
+✅ GetItem returned: asd
+
+3️⃣ Testing GetItems RPC...
+✅ GetItems returned 3 items
+   Not found IDs: []
+
+✅ All gRPC tests passed! Connection is working.
+"""
