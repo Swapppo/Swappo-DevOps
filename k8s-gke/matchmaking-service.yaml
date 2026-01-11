@@ -49,6 +49,17 @@ spec:
           value: http://notifications-service:8000
         - name: CHAT_SERVICE_URL
           value: http://chat-service:8000
+        - name: RABBITMQ_HOST
+          value: rabbitmq
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: swappo_user
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: rabbitmq-password
         resources:
           requests:
             memory: "256Mi"
