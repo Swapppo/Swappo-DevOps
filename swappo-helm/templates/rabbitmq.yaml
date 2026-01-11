@@ -1,0 +1,57 @@
+{{- if .Values.rabbitmq.enabled }}
+# RabbitMQ Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: {{ .Values.rabbitmq.service.port }}
+          name: amqp
+        - containerPort: {{ .Values.rabbitmq.service.managementPort }}
+          name: management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: {{ .Values.rabbitmq.auth.username }}
+        - name: RABBITMQ_DEFAULT_PASS
+          value: {{ .Values.rabbitmq.auth.password }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: {{ .Values.rabbitmq.service.type }}
+  ports:
+  - port: {{ .Values.rabbitmq.service.port }}
+    targetPort: {{ .Values.rabbitmq.service.port }}
+    name: amqp
+  - port: {{ .Values.rabbitmq.service.managementPort }}
+    targetPort: {{ .Values.rabbitmq.service.managementPort }}
+    name: management
+  selector:
+    app: rabbitmq
+{{- end }}

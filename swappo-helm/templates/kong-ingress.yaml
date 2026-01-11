@@ -1,0 +1,72 @@
+{{- if .Values.kong.enabled }}
+# Kong Ingress for Swappo Microservices
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swappo-kong-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/strip-path: {{ .Values.kong.stripPath | quote }}
+    konghq.com/protocols: {{ .Values.kong.protocols | quote }}
+    {{- if .Values.tls.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.tls.clusterIssuer | quote }}
+    {{- end }}
+spec:
+  ingressClassName: kong
+  {{- if .Values.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.domain }}
+    secretName: swappo-tls-kong
+  {{- end }}
+  rules:
+  - host: {{ .Values.domain }}
+    http:
+      paths:
+      {{- if .Values.services.auth.enabled }}
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.auth.name }}
+            port:
+              number: {{ .Values.services.auth.port }}
+      {{- end }}
+      {{- if .Values.services.catalog.enabled }}
+      - path: /catalog
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.catalog.name }}
+            port:
+              number: {{ .Values.services.catalog.port }}
+      {{- end }}
+      {{- if .Values.services.chat.enabled }}
+      - path: /chat
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.chat.name }}
+            port:
+              number: {{ .Values.services.chat.port }}
+      {{- end }}
+      {{- if .Values.services.matchmaking.enabled }}
+      - path: /matchmaking
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.matchmaking.name }}
+            port:
+              number: {{ .Values.services.matchmaking.port }}
+      {{- end }}
+      {{- if .Values.services.notifications.enabled }}
+      - path: /notifications
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.services.notifications.name }}
+            port:
+              number: {{ .Values.services.notifications.port }}
+      {{- end }}
+{{- end }}

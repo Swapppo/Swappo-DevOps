@@ -1,0 +1,17 @@
+# Swappo Helm Chart
+apiVersion: v2
+name: swappo
+description: A Helm chart for Swappo microservices platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - microservices
+  - trading-platform
+  - kubernetes
+
+maintainers:
+  - name: Swappo Team
+
+dependencies: []

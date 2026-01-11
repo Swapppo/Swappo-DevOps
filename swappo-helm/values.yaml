@@ -1,0 +1,157 @@
+# Swappo Helm Chart Values - Production Configuration
+
+# Global settings
+global:
+  namespace: swappo
+  environment: production
+  imageRegistry: ghcr.io/swapppo
+  imagePullPolicy: Always
+  
+# Image pull secrets for GitHub Container Registry
+imagePullSecrets:
+  - name: ghcr-secret
+
+# ConfigMap values
+config:
+  sqlEcho: "false"
+  accessTokenExpireMinutes: "30"
+  refreshTokenExpireDays: "7"
+  environment: "production"
+
+# Cloud SQL configuration  
+cloudSQL:
+  instance: "swapppo:europe-west3:swappo-db"
+  user: "swappo_user"
+  password: "Admin"
+  
+# Google Cloud Storage
+gcs:
+  bucketName: "swappo-catalog-images"
+  projectId: "swapppo"
+
+# External IPs
+externalIP: "34.40.17.122"
+domain: "swappo.art"
+
+# TLS configuration
+tls:
+  enabled: true
+  clusterIssuer: "letsencrypt-prod"
+
+# Service configurations
+services:
+  auth:
+    enabled: true
+    name: auth-service
+    image: swappo-auth
+    tag: latest
+    replicas: 1
+    port: 8000
+    database: swappo_auth
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+  catalog:
+    enabled: true
+    name: catalog-service
+    image: swappo-catalog
+    tag: latest
+    replicas: 1
+    port: 8000
+    grpcPort: 50051
+    database: swappo_catalog
+    gcsEnabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+  chat:
+    enabled: true
+    name: chat-service
+    image: swappo-chat
+    tag: latest
+    replicas: 1
+    port: 8000
+    database: swappo_chat
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+  matchmaking:
+    enabled: true
+    name: matchmaking-service
+    image: swappo-matchmaking
+    tag: latest
+    replicas: 1
+    port: 8000
+    database: swappo_matchmaking
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+  notifications:
+    enabled: true
+    name: notifications-service
+    image: swappo-notifications
+    tag: latest
+    replicas: 1
+    port: 8000
+    database: swappo_notifications
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# RabbitMQ configuration
+rabbitmq:
+  enabled: true
+  auth:
+    username: guest
+    password: guest
+  service:
+    type: ClusterIP
+    port: 5672
+    managementPort: 15672
+
+# Monitoring - Prometheus
+prometheus:
+  enabled: true
+  retention: 15d
+  storageSize: 10Gi
+
+# Monitoring - Grafana  
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: admin
+
+# Kong API Gateway
+kong:
+  enabled: true
+  stripPath: "true"
+  protocols: "https,http"
+
+# Workload Identity (for GCS access)
+workloadIdentity:
+  enabled: true
+  serviceAccount: default

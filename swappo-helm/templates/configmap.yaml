@@ -1,0 +1,11 @@
+# ConfigMap - Stores non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swappo-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  SQL_ECHO: {{ .Values.config.sqlEcho | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.config.accessTokenExpireMinutes | quote }}
+  REFRESH_TOKEN_EXPIRE_DAYS: {{ .Values.config.refreshTokenExpireDays | quote }}
+  ENVIRONMENT: {{ .Values.config.environment | quote }}

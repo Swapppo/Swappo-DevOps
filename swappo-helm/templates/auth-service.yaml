@@ -1,0 +1,103 @@
+{{- if .Values.services.auth.enabled }}
+# Auth Service Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.auth.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.services.auth.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.services.auth.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.services.auth.name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.services.auth.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+      - name: {{ .name }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.services.auth.name }}
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.services.auth.image }}:{{ .Values.services.auth.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.services.auth.port }}
+          name: http
+        resources:
+          {{- toYaml .Values.services.auth.resources | nindent 10 }}
+        env:
+        - name: DATABASE_URL
+          value: postgresql://{{ .Values.cloudSQL.user }}:{{ .Values.cloudSQL.password }}@127.0.0.1:5432/{{ .Values.services.auth.database }}
+        - name: SQL_ECHO
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: SQL_ECHO
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: REFRESH_TOKEN_EXPIRE_DAYS
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: REFRESH_TOKEN_EXPIRE_DAYS
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ENVIRONMENT
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.auth.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.auth.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - {{ .Values.cloudSQL.instance | quote }}
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.auth.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.services.auth.port }}
+    targetPort: {{ .Values.services.auth.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.services.auth.name }}
+{{- end }}

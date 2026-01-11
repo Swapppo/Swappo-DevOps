@@ -1,0 +1,124 @@
+{{- if .Values.services.catalog.enabled }}
+# Catalog Service Deployment with Cloud SQL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.catalog.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.services.catalog.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.services.catalog.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.services.catalog.name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.services.catalog.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ .Values.workloadIdentity.serviceAccount }}
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+      - name: {{ .name }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.services.catalog.name }}
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.services.catalog.image }}:{{ .Values.services.catalog.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.services.catalog.port }}
+          name: http
+        - containerPort: {{ .Values.services.catalog.grpcPort }}
+          name: grpc
+        resources:
+          {{- toYaml .Values.services.catalog.resources | nindent 10 }}
+        env:
+        - name: DATABASE_URL
+          value: postgresql://{{ .Values.cloudSQL.user }}:{{ .Values.cloudSQL.password }}@127.0.0.1:5432/{{ .Values.services.catalog.database }}
+        - name: SQL_ECHO
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: SQL_ECHO
+        {{- if .Values.services.catalog.gcsEnabled }}
+        - name: USE_GCS
+          value: "true"
+        - name: GCS_BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: gcs-bucket-name
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: swappo-secrets
+              key: gcp-project-id
+        {{- end }}
+        - name: RABBITMQ_HOST
+          value: rabbitmq-service
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: {{ .Values.rabbitmq.auth.username }}
+        - name: RABBITMQ_PASSWORD
+          value: {{ .Values.rabbitmq.auth.password }}
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ENVIRONMENT
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.catalog.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.catalog.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+      # Cloud SQL Proxy sidecar
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - {{ .Values.cloudSQL.instance | quote }}
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+---
+# Catalog Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.catalog.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.services.catalog.port }}
+    targetPort: {{ .Values.services.catalog.port }}
+    protocol: TCP
+    name: http
+  - port: {{ .Values.services.catalog.grpcPort }}
+    targetPort: {{ .Values.services.catalog.grpcPort }}
+    protocol: TCP
+    name: grpc
+  selector:
+    app: {{ .Values.services.catalog.name }}
+{{- end }}

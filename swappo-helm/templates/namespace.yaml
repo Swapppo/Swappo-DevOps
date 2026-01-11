@@ -1,0 +1,11 @@
+# Namespace - Isolates your application resources
+# DISABLED: Namespace already exists from manual deployment
+# Helm will use the existing namespace instead of creating it
+{{- if .Values.createNamespace | default false }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace }}
+  labels:
+    name: {{ .Values.global.namespace }}
+{{- end }}

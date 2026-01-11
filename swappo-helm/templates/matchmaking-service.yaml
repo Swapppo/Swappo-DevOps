@@ -1,0 +1,101 @@
+{{- if .Values.services.matchmaking.enabled }}
+# Matchmaking Service Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.matchmaking.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.services.matchmaking.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.services.matchmaking.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.services.matchmaking.name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.services.matchmaking.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+      - name: {{ .name }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.services.matchmaking.name }}
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.services.matchmaking.image }}:{{ .Values.services.matchmaking.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.services.matchmaking.port }}
+          name: http
+        resources:
+          {{- toYaml .Values.services.matchmaking.resources | nindent 10 }}
+        env:
+        - name: DATABASE_URL
+          value: postgresql://{{ .Values.cloudSQL.user }}:{{ .Values.cloudSQL.password }}@127.0.0.1:5432/{{ .Values.services.matchmaking.database }}
+        - name: SQL_ECHO
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: SQL_ECHO
+        - name: RABBITMQ_HOST
+          value: rabbitmq-service
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: {{ .Values.rabbitmq.auth.username }}
+        - name: RABBITMQ_PASSWORD
+          value: {{ .Values.rabbitmq.auth.password }}
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: swappo-config
+              key: ENVIRONMENT
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.matchmaking.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.services.matchmaking.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+        args:
+          - "--structured-logs"
+          - "--port=5432"
+          - {{ .Values.cloudSQL.instance | quote }}
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.matchmaking.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.services.matchmaking.port }}
+    targetPort: {{ .Values.services.matchmaking.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.services.matchmaking.name }}
+{{- end }}
