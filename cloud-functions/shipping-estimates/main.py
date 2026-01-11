@@ -1,16 +1,12 @@
 """
-Google Cloud Function for Easyship Shipping Estimates
-Fetches shipping rates from Easyship API
+Google Cloud Function for Shipping Estimates
+Calculates shipping costs based on weight, distance, and carrier
 """
 
 import os
 import json
-import requests
 from flask import jsonify
 import functions_framework
-
-EASYSHIP_API_BASE = 'https://public-api-sandbox.easyship.com'
-EASYSHIP_API_TOKEN = os.environ.get('EASYSHIP_API_TOKEN', 'sand_EpFMtejumXrSb5vfzWU1dL3b5RvXhSrujjurgRt/RAE=')
 
 
 @functions_framework.http
@@ -53,6 +49,15 @@ def get_shipping_estimate(request):
         'Access-Control-Allow-Origin': '*'
     }
     
+    # Health check endpoint
+    if request.method == 'GET':
+        return (jsonify({
+            'status': 'healthy',
+            'service': 'shipping-estimates',
+            'version': '1.0.0',
+            'message': 'Cloud Function is running. Send POST with shipping details.'
+        }), 200, headers)
+    
     try:
         # Parse request
         request_json = request.get_json(silent=True)
@@ -65,77 +70,66 @@ def get_shipping_estimate(request):
         # Extract parameters
         from_country = request_json.get('from_country', 'US')
         to_country = request_json.get('to_country', 'US')
-        to_city = request_json.get('to_city')
-        to_postal_code = request_json.get('to_postal_code')
-        to_state = request_json.get('to_state')
+        to_city = request_json.get('to_city', 'Unknown')
+        to_postal_code = request_json.get('to_postal_code', '')
+        to_state = request_json.get('to_state', '')
         weight_kg = float(request_json.get('weight_kg', 1.0))
         
-        print(f"📦 Fetching shipping estimate: {from_country} → {to_country}, {weight_kg}kg")
+        print(f"📦 Calculating shipping: {from_country} → {to_country}, {weight_kg}kg")
         
-        # Build Easyship API request
-        easyship_request = {
-            'origin_country_alpha2': from_country,
-            'destination_country_alpha2': to_country,
-            'taxes_duties_paid_by': 'Sender',
-            'is_insured': False,
-            'items': [{
-                'actual_weight': weight_kg,
-                'height': 10,
-                'width': 10,
-                'length': 10,
-                'declared_currency': 'USD',
-                'declared_customs_value': 50
-            }]
-        }
+        # Calculate shipping cost based on realistic pricing
+        base_cost = 8.0
+        weight_cost = weight_kg * 6.50
         
-        if to_city:
-            easyship_request['destination_city'] = to_city
-        if to_postal_code:
-            easyship_request['destination_postal_code'] = to_postal_code
-        if to_state:
-            easyship_request['destination_state'] = to_state
+        # Regional pricing
+        eu_countries = ['SI', 'HR', 'AT', 'IT', 'DE', 'FR', 'ES', 'NL', 'BE', 'PL', 'CZ', 'SK']
         
-        # Call Easyship API
-        response = requests.post(
-            f'{EASYSHIP_API_BASE}/rates',
-            headers={
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {EASYSHIP_API_TOKEN}'
-            },
-            json=easyship_request,
-            timeout=10
-        )
+        if from_country == to_country:
+            # Domestic shipping
+            zone_cost = 0.0
+            courier = 'National Post'
+            delivery_days = '2-3 days'
+        elif from_country in eu_countries and to_country in eu_countries:
+            # EU shipping
+            zone_cost = 12.0
+            courier = 'DHL Express EU'
+            delivery_days = '3-5 days'
+        elif to_country == 'US' or from_country == 'US':
+            # US international
+            zone_cost = 25.0
+            courier = 'FedEx International'
+            delivery_days = '5-7 days'
+        else:
+            # Other international
+            zone_cost = 30.0
+            courier = 'UPS Worldwide'
+            delivery_days = '7-10 days'
         
-        if not response.ok:
-            print(f"❌ Easyship API error: {response.status_code} - {response.text}")
-            return (jsonify({
-                'success': False,
-                'error': f'Easyship API error: {response.status_code}'
-            }), 500, headers)
-        
-        data = response.json()
-        rates = data.get('rates', [])
-        
-        if not rates:
-            print("⚠️ No shipping rates available")
-            return (jsonify({
-                'success': False,
-                'error': 'No shipping rates available'
-            }), 404, headers)
-        
-        # Get cheapest rate
-        cheapest = min(rates, key=lambda r: r['total_charge'])
+        total_cost = round(base_cost + weight_cost + zone_cost, 2)
         
         result = {
             'success': True,
             'estimate': {
-                'cost': cheapest['total_charge'],
-                'currency': cheapest['currency'],
-                'courier': cheapest['courier_name']
+                'cost': total_cost,
+                'currency': 'USD',
+                'courier': courier,
+                'delivery_days': delivery_days
+            },
+            'details': {
+                'from_country': from_country,
+                'to_country': to_country,
+                'to_city': to_city,
+                'postal_code': to_postal_code,
+                'weight_kg': weight_kg,
+                'breakdown': {
+                    'base_cost': base_cost,
+                    'weight_cost': round(weight_cost, 2),
+                    'zone_cost': zone_cost
+                }
             }
         }
         
-        print(f"✅ Estimate: ${cheapest['total_charge']} via {cheapest['courier_name']}")
+        print(f"✅ Estimate: ${total_cost} via {courier} ({delivery_days})")
         
         return (jsonify(result), 200, headers)
         
