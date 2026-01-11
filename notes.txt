@@ -1,0 +1,21 @@
+
+Grafana URL: http://34.159.79.120
+Username: admin
+Password: admin123
+
+
+Adding Prometheus datasource to Grafana...
+Prometheus datasource added successfully
+
+Verifying Loki datasource...
+Loki datasource exists
+
+=== Datasource Configuration Complete ===
+Grafana URL: http://34.159.79.120
+Username: admin
+Password: admin123
+
+Available datasources:
+  - Prometheus (metrics): http://prometheus:9090
+  - Loki (logs): http://loki:3100
+PS C:\Users\turkf\Pictures\mag2\RSO\Swappo> 

@@ -1,0 +1,69 @@
+{
+  "dashboard": {
+    "title": "Swappo Centralized Logs",
+    "tags": ["swappo", "logs"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Log Volume by Service",
+        "targets": [
+          {
+            "expr": "sum by (app) (rate({namespace=\"swappo\"}[5m]))",
+            "refId": "A"
+          }
+        ],
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "title": "Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate({namespace=\"swappo\"} |~ \"ERROR|error|Error\"[5m]))",
+            "refId": "A"
+          }
+        ],
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "title": "Recent Errors",
+        "targets": [
+          {
+            "expr": "{namespace=\"swappo\"} |~ \"ERROR|error|Error\"",
+            "refId": "A"
+          }
+        ],
+        "type": "logs",
+        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 8}
+      },
+      {
+        "title": "HTTP Status Codes",
+        "targets": [
+          {
+            "expr": "sum by (status) (rate({namespace=\"swappo\"} | regexp \"(?P<status>\\\\d{3})\"[5m]))",
+            "refId": "A"
+          }
+        ],
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "title": "Logs by Container",
+        "targets": [
+          {
+            "expr": "sum by (container) (rate({namespace=\"swappo\"}[5m]))",
+            "refId": "A"
+          }
+        ],
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}
